@@ -1,0 +1,48 @@
+{
+  "abis": [
+    "arm64-v8a",
+    "armeabi-v7a",
+    "x86",
+    "x86_64"
+  ],
+  "assets": [],
+  "buildDir": "build",
+  "build": {
+    "build_id": null,
+    "build_number": 0,
+    "build_time": 0
+  },
+  "useFeatures": [],
+  "icon": "res_try/logo.png",
+  "ignoredDirs": [
+    "build"
+  ],
+  "launchConfig": {
+    "displaySplash": false,
+    "hideLauncher": false,
+    "hideLogs": false,
+    "stableMode": false,
+    "volumeUpcontrol": false,
+    "permissions": [],
+    "serviceDesc": "使脚本自动操作(点击、长按、滑动等)所需，若关闭则只能执行不涉及自动操作的脚本。",
+    "splashIcon": null,
+    "splashText": "Powered by openautojs"
+  },
+  "libs": [
+    "libjackpal-androidterm5.so",
+    "libjackpal-termexec2.so"
+  ],
+  "main": "try.js",
+  "name": "try",
+  "outputPath": "/storage/emulated/0/Pictures",
+  "packageName": "com.script.try",
+  "projectDirectory": "/storage/emulated/0/Pictures",
+  "scripts": {},
+  "signingConfig": {
+    "alias": null,
+    "keystore": null
+  },
+  "sourcePath": "/storage/emulated/0/Pictures/try.js",
+  "versionCode": 1,
+  "versionName": "1.0.0"
+}
