@@ -16,6 +16,9 @@ var selecting = false; // 是否正在等待用户下一次触控以记录坐标
 var history = [];     // 坐标历史记录 [{x,y,time}]
 var selectTimer = null; // 选择模式超时计时器
 var storage = storages.create("auto_clicker");
+// 新增：触摸记录相关
+var recording = false;           // 是否正在记录所有触摸
+var touchRecords = [];           // 触摸记录 [{x,y,time}]
 
 // 共享坐标（线程安全）
 const AtomicInteger = java.util.concurrent.atomic.AtomicInteger;
@@ -82,12 +85,12 @@ var window = floaty.window(
             <horizontal>
               <button id="ui_start"  text="开始" w="0" layout_weight="1" h="42" textSize="13sp" bg="#4CAF50"  textColor="#FFFFFF" margin="0 4 0 0"/>
               <button id="ui_select" text="选点" w="0" layout_weight="1" h="42" textSize="13sp" bg="#FFC107" textColor="#263238" margin="0 4 0 0"/>
-              <button id="ui_history" text="历史" w="0" layout_weight="1" h="42" textSize="13sp" bg="#9C27B0" textColor="#FFFFFF"/>
+              <button id="ui_history" text="历史" w="0" layout_weight="1" h="42" textSize="13sp" bg="#9C27B0" textColor="#FFFFFF" margin="0 4 0 0"/>
             </horizontal>
             <horizontal margin="6 0 0 0">
               <button id="ui_log"   text="日志" w="0" layout_weight="1" h="42" textSize="13sp" bg="#2196F3" textColor="#FFFFFF" margin="0 4 0 0"/>
               <button id="ui_close" text="关闭" w="0" layout_weight="1" h="42" textSize="13sp" bg="#F44336" textColor="#FFFFFF" margin="0 4 0 0"/>
-              <button id="btn_placeholder" text="" w="0" layout_weight="1" h="42" bg="#37474F" alpha="0" enabled="false"/>
+              <button id="ui_record" text="记录" w="0" layout_weight="1" h="42" textSize="13sp" bg="#607D8B" textColor="#FFFFFF" margin="0 4 0 0"/>
             </horizontal>
           </vertical>
 
@@ -231,9 +234,18 @@ window.ui_select.on("click", () => {
   startSelectMode();
 });
 
-// 全局触控监听，只在 selecting=true 时记录一次
+// 全局触控监听，只在 selecting=true 时记录一次 (扩展：recording 模式下持续记录)
 events.observeTouch();
 events.on("touch", function (p) {
+  // 记录模式：捕获所有触摸
+  if (recording) {
+    var xyR = getTouchXY(p);
+    touchRecords.push({ x: xyR[0], y: xyR[1], time: new Date().toLocaleTimeString() });
+    if (touchRecords.length > 300) touchRecords.shift();
+    console.log("[touch] (" + xyR[0] + "," + xyR[1] + ")  总数=" + touchRecords.length);
+    ui.run(() => { try { if (window.preview) window.preview.setText("Last: (" + xyR[0] + "," + xyR[1] + ") 记录=" + touchRecords.length); } catch (e) {} });
+  }
+  // 选点模式：仅处理一次
   if (!selecting) return;
   selecting = false;
   if (selectTimer) { try { clearTimeout(selectTimer); } catch (e) {} selectTimer = null; }
@@ -310,6 +322,61 @@ window.ui_close.on("click", () => {
   window.close();
   exit();
 });
+
+// 记录按钮：开始/停止记录触摸点
+window.ui_record.on("click", () => {
+  if (!recording) {
+    recording = true;
+    ui.run(() => {
+      window.ui_record.setText("录中");
+      try { window.ui_record.setBackgroundColor(colors.parseColor("#FF9800")); } catch (e) {}
+    });
+    toast("开始记录触摸点");
+  } else {
+    recording = false;
+    ui.run(() => {
+      window.ui_record.setText("记录");
+      try { window.ui_record.setBackgroundColor(colors.parseColor("#607D8B")); } catch (e) {}
+    });
+    toast("停止记录，共 " + touchRecords.length + " 点");
+    if (touchRecords.length) {
+      threads.start(() => {
+        try {
+          var items = touchRecords.map((r, i) => (i + 1) + ") (" + r.x + "," + r.y + ") " + r.time);
+          var idx = dialogs.select("触摸记录 (点选复制)", items);
+            if (idx >= 0) {
+              setClip(touchRecords[idx].x + "," + touchRecords[idx].y);
+              toast("已复制: " + touchRecords[idx].x + "," + touchRecords[idx].y);
+            }
+        } catch (e) {}
+      });
+    }
+  }
+});
+
+// 长按记录按钮：操作菜单（查看/复制全部/清空）
+try {
+  window.ui_record.setOnLongClickListener(function(v){
+    if (!touchRecords.length) { toast("暂无记录"); return true; }
+    threads.start(() => {
+      try {
+        var act = dialogs.select("记录操作", ["查看列表", "复制全部", "清空"]);
+        if (act == 0) {
+          var lines = touchRecords.map((r,i)=> (i+1)+": ("+r.x+","+r.y+") "+r.time).join("\n");
+          dialogs.alert("触摸列表", lines);
+        } else if (act == 1) {
+          setClip(touchRecords.map(r=> r.x+","+r.y).join(";"));
+          toast("已复制全部");
+        } else if (act == 2) {
+          touchRecords = [];
+          toast("已清空");
+          ui.run(()=>{ try { if (window.preview) window.preview.setText(""); } catch(e){} });
+        }
+      } catch (e) {}
+    });
+    return true;
+  });
+} catch (e) {}
 
 // 保活
 setInterval(() => {}, 1000);
