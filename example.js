@@ -53,7 +53,7 @@ function setWindowTouchable(t) { try { window.setTouchable(t); } catch (e) {} }
 // 3) 悬浮窗
 var window = floaty.window(
   <frame>
-    <vertical bg="#263238" alpha="0.96" padding="10" w="300">
+    <vertical bg="#263238" alpha="0.96" padding="10" w="*">
       <horizontal gravity="center_vertical">
         <img id="floaty_icon"
              src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
